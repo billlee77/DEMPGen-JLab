@@ -137,7 +137,7 @@ class DEMP_Reaction {
 //  Particle* l_Recoil_solved;
 
   TLorentzVector r_l_Ejectile_solved;
-  TLorentzVector l_Recoil_solved;
+  TLorentzVector r_l_Recoil_solved;
 
   double f_Ejectile_Mass;
   double f_Ejectile_Mass_GeV;
@@ -228,15 +228,19 @@ class DEMP_Reaction {
   //  Particle* Photon;
 
 
-  TLorentzVector Interaction_Solve;
-  TLorentzVector Target_Solve;
+  TLorentzVector* Interaction;
+  TLorentzVector* Interaction_Solve;
+  TLorentzVector* Target_Solve;
+
+  TLorentzVector* Target;
   
-  TLorentzVector Initial;
-  TLorentzVector Final;
+  TLorentzVector* Initial;
+  TLorentzVector* Final;
   
-  TLorentzVector VertBeamElec;
-  TLorentzVector VertScatElec;
-  TLorentzVector Photon;
+  TLorentzVector* VertBeamElec;
+  TLorentzVector* VertScatElec;
+  TLorentzVector* Photon;
+
 
   bool SolnCheck();
   double W_in_Solve(); 
@@ -249,8 +253,13 @@ class DEMP_Reaction {
   TF1* F;
   TVector3* UnitVect;
 
+  // Solve Function
   int Solve();
   int Solve(double theta, double phi);
+
+  double W_in();
+  double W_out();
+
 
   ///*--------------------------------------------------*/ 
   // Needed for the Solve function
@@ -323,6 +332,7 @@ class Pi0_Production:DEMP_Reaction{
     T Sign (T a, T b) {
     return (a < b) - (b < a);
   }
+
 
 };
 

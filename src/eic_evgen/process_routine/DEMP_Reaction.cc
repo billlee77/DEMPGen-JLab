@@ -74,9 +74,6 @@ void DEMP_Reaction::Init() {
   sTFile = Form("./%s/eic_%s.txt", dir_name, gfile_name.Data());
   sLFile= Form("./%s/eic_input_%s.dat", dir_name, gfile_name.Data());
    
- 
-  
-
   DEMPOut.open( sLFile.c_str() );
   DEMPDetails.open( sTFile.c_str() );
 	
@@ -186,7 +183,47 @@ void DEMP_Reaction::Init() {
   else{
     cout << "!!! Notice !!! The beam energy combination simulated does not match an expected case, a default luminosity value of - " << fLumi << " cm^2s^-1 has been assumed. !!! Notice !!!" << endl;
   }
- 
+  
+  /*--------------------------------------------------*/ 
+  // SJDK 03/04/22 -  New set of initialisation stuff for the solve function from Ishan and Bill
+
+  CoinToss = new TRandom3();
+
+  F = new TF1("F",
+              "[6]-sqrt([7]**2+x**2)-sqrt([8]**2+([3]-[0]*x)**2+([4]-[1]*x)**2+([5]-[2]*x)**2)",
+              0, 12000);
+
+  char AngleGenName[100] = "AngleGen";
+  double dummy[2] = {0,1};
+  // Changed the theta range here to match the one actually provided in the input .json file, these are already converted to radians in eic.cc (see ~ line 293)
+//  double ThetaRange[2] = {fX_Theta_I, fX_Theta_F};
+
+  f_Ejectile_Theta_I = fEjectileX_Theta_I;
+  f_Ejectile_Theta_F = fEjectileX_Theta_F;
+
+  double ThetaRange[2] = {f_Ejectile_Theta_I, f_Ejectile_Theta_F};
+  double PhiRange[2] = {0, 360*TMath::DegToRad()};
+
+  AngleGen = new CustomRand(AngleGenName, dummy,
+                            ThetaRange, PhiRange);
+
+  UnitVect = new TVector3(0,0,1);
+
+//  ///*--------------------------------------------------*/ 
+//  // Produced hadron and recoilded hadron from the solve function 
+//
+//  r_lX_solved = new Particle();
+//  r_l_scat_hadron_solved = new Particle();
+//
+//  Interaction = new Particle();
+//  Target      = new Particle();
+//  Initial     = new Particle();
+//  Final       = new Particle();
+//
+//  VertBeamElec = new Particle();
+//  VertScatElec = new Particle();
+//
+//  Photon = new Particle();
 
 }
 
@@ -268,6 +305,18 @@ void DEMP_Reaction::Processing_Event() {
     return;
   }
 
+
+  // SJDK - 17/04/23 - To use the solve function, comment out lines 295-346, uncomment lines 287-289 and 351-352
+
+  ///*--------------------------------------------------*/ 
+  /// Modifier: Ishan Goel 
+  /// Date: March 22, 2023
+  /// This Solve function is the same as the one implemented in the SoLID generator part
+  // Removing cases with no solution
+  if(!Solve()){
+    return;
+  }
+   
   // ---------------------------------------------------------
   // Pion momentum in collider frame, analytic solution starts
   // ---------------------------------------------------------
@@ -296,6 +345,7 @@ void DEMP_Reaction::Processing_Event() {
   fb =  fb + factor;  
   fc = r_lphoton.E() + r_lproton.E();
      
+//  double ft = fc * fc - fb + f_Ejectile_Mass * f_Ejectile_Mass - fProton_Mass * fProton_Mass;
   double ft = fc * fc - fb + f_Ejectile_Mass * f_Ejectile_Mass - f_Recoil_Mass * f_Recoil_Mass;
      
   double fQA = 4.0 * ( fa * fa - fc * fc );
@@ -313,16 +363,19 @@ void DEMP_Reaction::Processing_Event() {
   /// And obtain recoiled proton in collider (lab) frame
   ///---------------------------------------------------------
 
-   r_l_Ejectile.SetPxPyPzE( (sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * sin(f_Ejectile_Theta_Col) * cos(f_Ejectile_Phi_Col),
-  		   ( sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * sin(f_Ejectile_Theta_Col) * sin(f_Ejectile_Phi_Col),
-  		   ( sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * cos(f_Ejectile_Theta_Col),
-  		   fepi1 );
+//   r_l_Ejectile.SetPxPyPzE( (sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * sin(f_Ejectile_Theta_Col) * cos(f_Ejectile_Phi_Col),
+//  		   ( sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * sin(f_Ejectile_Theta_Col) * sin(f_Ejectile_Phi_Col),
+//  		   ( sqrt( pow( fepi1 , 2) - pow(f_Ejectile_Mass , 2) ) ) * cos(f_Ejectile_Theta_Col),
+//  		   fepi1 );
   
-   l_Recoil.SetPxPyPzE( ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile).X(),
-  			       ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Y(),
-  			       ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Z(),
-  			       sqrt( pow( ( ( ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Vect() ).Mag()),2) +
-  				     pow( f_Recoil_Mass , 2) ) );
+//   l_Recoil.SetPxPyPzE( ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile).X(),
+//  			       ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Y(),
+//  			       ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Z(),
+//  			       sqrt( pow( ( ( ( r_lproton + r_lelectron - r_lscatelec - r_l_Ejectile ).Vect() ).Mag()),2) +
+//  				     pow( f_Recoil_Mass , 2) ) );
+
+  r_l_Ejectile = r_l_Ejectile_solved;
+  l_Recoil = r_l_Recoil_solved;
 
   ///--------------------------------------------------
   
@@ -360,6 +413,20 @@ void DEMP_Reaction::Processing_Event() {
   if( std::abs( fsinig.Mag() - fsfing.Mag() ) < fDiff ) {
     kSConserve = true;
   }
+  // SJDK 27/01/23 - For Kaon events, 0.5 is too stringent for conservation law check with the current (Ahmed) method to determine meson properties
+  // Hopefully, Rory's method will be better here and we can utilise the same conservation law check for both particles
+//  if (rEjectile == "Pi+" || rEjectile == "Pi0"){
+//    if ( pd->CheckLaws( r_lelectron, r_lproton, r_lscatelec, r_l_Ejectile, l_Recoil, 0.5) != 1 ){
+//      fConserve++;
+//      return;
+//    }
+//    else if (rEjectile == "K+"){
+//      if ( pd->CheckLaws( r_lelectron, r_lproton, r_lscatelec, r_l_Ejectile, l_Recoil, 10) != 1 ){
+//	fConserve++;
+//	return;
+//      }
+//    }
+//  }
 
 ///*--------------------------------------------------*/ 
 //-> 10/05/23 - Love added a slimmed down, simpler to read version of the CheckLaws fn
@@ -1001,7 +1068,176 @@ void DEMP_Reaction::DEMPReact_HEPMC3_Output() {
   DEMPOut << "P" << " " << "4" << " " << "-1" << " " << PDGtype(produced_X) << " " << r_l_Ejectile_g.X() << " "  << r_l_Ejectile_g.Y() << " "  << r_l_Ejectile_g.Z() << " " << r_l_Ejectile_g.E() << " " << r_l_Ejectile_g.M() << " " << "1" << endl;
   // Recoil hadron
   DEMPOut << "P" << " " << "5" << " " << "-1" << " " << PDGtype(recoil_hadron) << " " << l_Recoil_g.X() << " "  << l_Recoil_g.Y() << " "  << l_Recoil_g.Z() << " " << l_Recoil_g.E() << " " <<  l_Recoil_g.M() << " " << "1" << endl;
+  
+}
 
+/*--------------------------------------------------*/ 
+
+bool DEMP_Reaction::SolnCheck()
+{
+//
+//  // Double Checking for solution viability
+//  if (TMath::Abs(f_Scat_hadron_Mass-r_l_scat_hadron_solved->M())>1){
+//    //cerr << "Mass Missmatch" << endl;
+//    //cerr << TMath::Abs(proton_mass_mev-Proton->M()) << endl;
+//    return false;
+//  }
+//  if (TMath::Abs(W_in()-W_out())>1){
+//    //cerr << "W Missmatch" << endl;
+//    //cerr << TMath::Abs(W_in()-W_out()) << endl;
+//    return false;
+//  }
+//  *Final = *r_l_scat_hadron_solved + *r_lX_solved;
+//
+//  if (TMath::Abs(Initial->Px()-Final->Px())>1){
+//    //cerr << "Px Missmatch" << endl;
+//    //cerr << TMath::Abs(Initial->Px()-Final->Px()) << endl;
+//    return false;
+//  }
+//
+//  if (TMath::Abs(Initial->Py()-Final->Py())>1){
+//    //cerr << "Py Missmatch" << endl;
+//    //cerr << TMath::Abs(Initial->Py()-Final->Py()) << endl;
+//    return false;
+//  }
+//
+//  if (TMath::Abs(Initial->Pz()-Final->Pz())>1){
+//    //cerr << "Pz Missmatch" << endl;
+//    //cerr << TMath::Abs(Initial->Pz()-Final->Pz()) << endl;
+//    return false;
+//  }
+//
+//  if (TMath::Abs(Initial->E()-Final->E())>1){
+//    return false;
+//  }
+  return true;
+}
+
+/*--------------------------------------------------*/ 
+double DEMP_Reaction::W_in()
+{
+//  return (*Interaction+*Target).Mag2();
+  return 0;
+}
+
+/*--------------------------------------------------*/ 
+double DEMP_Reaction::W_out()
+{
+//  return (*r_l_scat_hadron_solved+*r_lX_solved).Mag2();
+  return 0;
+}
+
+/*--------------------------------------------------*/ 
+
+int DEMP_Reaction::Solve()
+{
+//  double theta = AngleGen->Theta();
+//  double phi = AngleGen->Phi();
+//  theta = 0.282478;   
+//  phi = 3.49651;
+//  cout << " Theta Phi: "<< theta << "   " << phi << endl; 
+
+  // Setting the initial values for solve function
+
+  VertBeamElec->SetPxPyPzE(r_lelectron.Px(), r_lelectron.Py(), r_lelectron.Pz(), r_lelectron.E());
+  VertScatElec->SetPxPyPzE(r_lscatelec.Px(), r_lscatelec.Py(), r_lscatelec.Pz(), r_lscatelec.E());
+  Target->SetPxPyPzE(r_lproton.Px(), r_lproton.Py(), r_lproton.Pz(), r_lproton.E());
+  *Photon = *VertBeamElec - *VertScatElec;
+  *Interaction = *Photon;
+
+  *Initial = *Interaction+*Target;
+
+//*--------------------------------------------------*/ 
+
+  theta =  f_Ejectile_Theta_Col;
+  phi   =  f_Ejectile_Phi_Col;  
+
+  return this->Solve(theta, phi);
 }
 
 
+int DEMP_Reaction::Solve(double theta, double phi)
+{
+
+  W_in_val = W_in();
+
+  if (W_in_val<0){
+    return 0;
+  }
+
+  UnitVect->SetTheta(theta);
+  UnitVect->SetPhi(phi);
+  UnitVect->SetMag(1);
+
+  double* pars = new double[9];
+
+  pars[0] = UnitVect->X();
+  pars[1] = UnitVect->Y();
+  pars[2] = UnitVect->Z();
+  pars[3] = Initial->Px();
+  pars[4] = Initial->Py();
+  pars[5] = Initial->Pz();
+  pars[6] = Initial->E();
+  pars[7] = f_Ejectile_Mass;
+  pars[8] = f_Recoil_Mass;
+
+  F->SetParameters(pars);
+
+  P = F->GetX(0, 0, pars[6], 0.0001, 10000);
+
+////  Particle * r_lX_temp = new Particle(f_Ejectile_Mass,
+//                                  P*pars[0],
+//                                  P*pars[1],
+//                                  P*pars[2]);
+//
+//  Particle * r_lX_temp = new Particle(f_Ejectile_Mass,
+//                                  P*pars[0],
+//                                  P*pars[1],
+//                                  P*pars[2]);
+
+  Float_t r_l_Ejectile_E = sqrt( pow(P*pars[0],2) + pow(P*pars[1],2) + pow(P*pars[2],2) + pow(f_Ejectile_Mass,2));
+  r_l_Ejectile_solved.SetPxPyPzE(P*pars[0], P*pars[1],  P*pars[2], r_l_Ejectile_E);
+
+  TLorentzVector * r_l_hadron_temp= new Particle();
+  *r_l_hadron_temp = *Initial- r_l_Ejectile_solved;
+
+  r_l_Recoil_solved.SetPxPyPzE(r_l_hadron_temp->Px(), r_l_hadron_temp->Py(), r_l_hadron_temp->Pz(), r_l_hadron_temp->E());
+
+//  delete r_lX_temp;
+  delete r_l_hadron_temp;
+  delete[] pars;
+ 
+  if (TMath::Abs(F->Eval(P)) < 1){
+    if (SolnCheck()){
+      return 1;
+    }
+  }
+
+//  
+//  ///*--------------------------------------------------*/ 
+//  /// Modifier: Ishan Goel
+//  /// Date: March 22, 2023
+//  /// Commenting out second solution as it is not giving any solution ever - MAYBE this works for the kaon and we need it for that?
+//  /// Check for Second solution:
+//  // P2 = F->GetX(0, P+100, pars[6], 0.0001, 10000);
+//  ///Try second solution
+//  // Particle * Pion2 = new Particle(pion_mass_mev,
+//  //                                 P*pars[0],
+//  //                                 P*pars[1],
+//  //                                 P*pars[2]);
+//  // Pion->SetPxPyPzE(Pion2->Px(), Pion2->Py(), Pion2->Pz(), Pion2->E());
+//  // Particle * Proton2 = new Particle();
+//  // *Proton2 = *Initial - * Pion;
+//  // Proton_Particle->SetPxPyPzE(Proton2->Px(), Proton2->Py(), Proton2->Pz(), Proton2->E());
+//  // delete Pion2;
+//  // delete Proton2;
+//  // if (TMath::Abs(F->Eval(P2)) < 1){
+//  //   if (SolnCheck()){
+//  //     return 1;
+//  //   }
+//  // }
+//  ///*--------------------------------------------------*/ 
+//
+  return 0;
+
+}
