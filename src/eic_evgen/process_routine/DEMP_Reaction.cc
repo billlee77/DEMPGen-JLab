@@ -225,6 +225,14 @@ void DEMP_Reaction::Init() {
 //
 //  Photon = new Particle();
 
+  VertBeamElec = new TLorentzVector();
+  VertScatElec = new TLorentzVector();
+
+  Initial      = new TLorentzVector();
+  Target       = new TLorentzVector();
+  Photon       = new TLorentzVector();
+  Interaction  = new TLorentzVector();
+
 }
 
 void DEMP_Reaction::Processing_Event() {
@@ -1131,6 +1139,7 @@ double DEMP_Reaction::W_out()
 
 int DEMP_Reaction::Solve()
 {
+
 //  double theta = AngleGen->Theta();
 //  double phi = AngleGen->Phi();
 //  theta = 0.282478;   
@@ -1146,8 +1155,6 @@ int DEMP_Reaction::Solve()
   *Interaction = *Photon;
 
   *Initial = *Interaction+*Target;
-
-//*--------------------------------------------------*/ 
 
   theta =  f_Ejectile_Theta_Col;
   phi   =  f_Ejectile_Phi_Col;  
