@@ -81,6 +81,13 @@ void DEMP_Reaction::Init() {
   rNEvents = fNEvents;
   rNEvent_itt = 0;
 
+  rSolveEvents_0Sol = 0;
+  rSolveEvents_1Sol = 0;
+  rSolveEvents_2Sol = 0;
+
+
+
+
   // 02/06/21 SJDK 
   // Set these values once the beam energies are read in
   fPSF = ( fEBeam * ( fScatElec_E_Hi - fScatElec_E_Lo ) *( sin( fScatElec_Theta_F ) - sin( fScatElec_Theta_I ) ) * 2 * fPI *( sin( fEjectileX_Theta_F ) - sin( fEjectileX_Theta_I ) ) * 2 * fPI );
@@ -189,9 +196,13 @@ void DEMP_Reaction::Init() {
 
   CoinToss = new TRandom3();
 
+//  F = new TF1("F",
+//              "[6]-sqrt([7]**2+x**2)-sqrt([8]**2+([3]-[0]*x)**2+([4]-[1]*x)**2+([5]-[2]*x)**2)",
+//              0, 12000);
+
   F = new TF1("F",
               "[6]-sqrt([7]**2+x**2)-sqrt([8]**2+([3]-[0]*x)**2+([4]-[1]*x)**2+([5]-[2]*x)**2)",
-              0, 12000);
+              0, r_lproton.E());
 
   char AngleGenName[100] = "AngleGen";
   double dummy[2] = {0,1};
@@ -212,18 +223,6 @@ void DEMP_Reaction::Init() {
 //  ///*--------------------------------------------------*/ 
 //  // Produced hadron and recoilded hadron from the solve function 
 //
-//  r_lX_solved = new Particle();
-//  r_l_scat_hadron_solved = new Particle();
-//
-//  Interaction = new Particle();
-//  Target      = new Particle();
-//  Initial     = new Particle();
-//  Final       = new Particle();
-//
-//  VertBeamElec = new Particle();
-//  VertScatElec = new Particle();
-//
-//  Photon = new Particle();
 
   VertBeamElec = new TLorentzVector();
   VertScatElec = new TLorentzVector();
@@ -833,6 +832,12 @@ void DEMP_Reaction::Detail_Output() {
 
   DEMPDetails << "Seed used for the Random Number Generator                    " << setw(20) << fSeed         << endl;
 
+  ///*--------------------------------------------------*/ 
+  /// Solve Only 
+  DEMPDetails << "Number of events with 0 Solution                             " << setw(20) << rSolveEvents_0Sol << endl;
+  DEMPDetails << "Number of events with 1 Solution                             " << setw(20) << rSolveEvents_1Sol << endl;
+  DEMPDetails << "Number of events with 2 Solution                             " << setw(20) << rSolveEvents_2Sol << endl;
+
 }
 
 ////*--------------------------------------------------
@@ -1145,7 +1150,6 @@ int DEMP_Reaction::Solve()
 //  theta = 0.282478;   
 //  phi = 3.49651;
 //  cout << " Theta Phi: "<< theta << "   " << phi << endl; 
-
   // Setting the initial values for solve function
 
   VertBeamElec->SetPxPyPzE(r_lelectron.Px(), r_lelectron.Py(), r_lelectron.Pz(), r_lelectron.E());
@@ -1158,6 +1162,12 @@ int DEMP_Reaction::Solve()
 
   theta =  f_Ejectile_Theta_Col;
   phi   =  f_Ejectile_Phi_Col;  
+
+  ///*--------------------------------------------------*/ 
+  /// For Debug purpose only
+  //  theta =  0.1;
+  //  phi   =  1.2;  
+  //  cout << "Theta: " << f_Ejectile_Theta_Col   <<  "     Phi: " <<  f_Ejectile_Phi_Col  << endl;
 
   return this->Solve(theta, phi);
 }
@@ -1188,63 +1198,92 @@ int DEMP_Reaction::Solve(double theta, double phi)
   pars[7] = f_Ejectile_Mass;
   pars[8] = f_Recoil_Mass;
 
+///*--------------------------------------------------*/ 
+/// Debug output for the parameters
+
+//  cout << pars[0] << " \n "
+//       << pars[1] << " \n " 
+//       << pars[2] << " \n " 
+//       << pars[3] << " \n " 
+//       << pars[4] << " \n " 
+//       << pars[5] << " \n " 
+//       << pars[6] << " \n " 
+//       << pars[7] << " \n "
+//       << pars[8] << endl;
+
   F->SetParameters(pars);
+
+
+  ///*--------------------------------------------------*/ 
+  // Looking for the 1st Solution:
+  //    If a solution found, then this will be the fist solution. Then we proceed to look for the 2nd solution. 
+  //    If no soluion found, then exit solve function
 
   P = F->GetX(0, 0, pars[6], 0.0001, 10000);
 
-////  Particle * r_lX_temp = new Particle(f_Ejectile_Mass,
-//                                  P*pars[0],
-//                                  P*pars[1],
-//                                  P*pars[2]);
-//
-//  Particle * r_lX_temp = new Particle(f_Ejectile_Mass,
-//                                  P*pars[0],
-//                                  P*pars[1],
-//                                  P*pars[2]);
+  if (TMath::Abs(F->Eval(P2)) < 1){
+	rSolveEvents_1Sol++;
+  } else {
+    rSolveEvents_0Sol++; 
+    return 0;
+  }
+
+  TLorentzVector * r_l_Ejectile_solved_1_temp = new TLorentzVector();
+  TLorentzVector * r_l_Ejectile_solved_2_temp = new TLorentzVector();
 
   Float_t r_l_Ejectile_E = sqrt( pow(P*pars[0],2) + pow(P*pars[1],2) + pow(P*pars[2],2) + pow(f_Ejectile_Mass,2));
-  r_l_Ejectile_solved.SetPxPyPzE(P*pars[0], P*pars[1],  P*pars[2], r_l_Ejectile_E);
+  r_l_Ejectile_solved_1_temp->SetPxPyPzE(P*pars[0], P*pars[1],  P*pars[2], r_l_Ejectile_E);
 
-  TLorentzVector * r_l_hadron_temp= new Particle();
+  ///*--------------------------------------------------*/ 
+  // Looking for the 2nd Solution 
+
+  P2 = F->GetX(0, P+100, pars[6], 0.0001, 10000);
+  Float_t r_l_Ejectile_E_2 = sqrt( pow(P2*pars[0],2) + pow(P2*pars[1],2) + pow(P2*pars[2],2) + pow(f_Ejectile_Mass,2));
+  r_l_Ejectile_solved_2_temp->SetPxPyPzE(P*pars[0], P*pars[1],  P*pars[2], r_l_Ejectile_E_2);
+
+
+  ///*--------------------------------------------------*/ 
+  // If a valid 2nd solution is found, then we are certian that there are two solutions.
+  //   - We then increament the counter for 2nd solution senario
+  //   - We then decreament the counter for the 1st solution senario 
+
+  if (TMath::Abs(F->Eval(P2)) < 1){
+	rSolveEvents_2Sol++;
+    rSolveEvents_1Sol--;
+  }
+
+  ///*--------------------------------------------------*/ 
+  /// Randomly select a solution
+  /// Coin toss function: give a 50/50 chance of selecting a solution out of the two 
+  /// Flat random number generation 
+
+  if ( Int_t(CoinToss->Uniform(0,100)) < 50) {
+    r_l_Ejectile_solved.SetPxPyPzE(r_l_Ejectile_solved_2_temp->X(), r_l_Ejectile_solved_2_temp->Y(), r_l_Ejectile_solved_2_temp->Z(), r_l_Ejectile_solved_2_temp->E());
+  } else {
+    r_l_Ejectile_solved.SetPxPyPzE(r_l_Ejectile_solved_2_temp->X(), r_l_Ejectile_solved_2_temp->Y(), r_l_Ejectile_solved_2_temp->Z(), r_l_Ejectile_solved_2_temp->E());
+  }
+
+//  cout << rSolveEvents_0Sol << "  " << rSolveEvents_1Sol << "  " << rSolveEvents_2Sol << endl;
+//  exit(0);
+
+  ///*--------------------------------------------------*/ 
+  /// Solve for the recoil information with the "solved" Ejectile informaiton
+  TLorentzVector * r_l_hadron_temp= new TLorentzVector();
   *r_l_hadron_temp = *Initial- r_l_Ejectile_solved;
-
   r_l_Recoil_solved.SetPxPyPzE(r_l_hadron_temp->Px(), r_l_hadron_temp->Py(), r_l_hadron_temp->Pz(), r_l_hadron_temp->E());
 
-//  delete r_lX_temp;
+  delete r_l_Ejectile_solved_1_temp;
+  delete r_l_Ejectile_solved_2_temp;
+
   delete r_l_hadron_temp;
   delete[] pars;
  
-  if (TMath::Abs(F->Eval(P)) < 1){
-    if (SolnCheck()){
-      return 1;
-    }
-  }
+//  if (TMath::Abs(F->Eval(P)) < 1){
+//    if (SolnCheck()){
+//      return 1;
+//    }
+//  }
 
-//  
-//  ///*--------------------------------------------------*/ 
-//  /// Modifier: Ishan Goel
-//  /// Date: March 22, 2023
-//  /// Commenting out second solution as it is not giving any solution ever - MAYBE this works for the kaon and we need it for that?
-//  /// Check for Second solution:
-//  // P2 = F->GetX(0, P+100, pars[6], 0.0001, 10000);
-//  ///Try second solution
-//  // Particle * Pion2 = new Particle(pion_mass_mev,
-//  //                                 P*pars[0],
-//  //                                 P*pars[1],
-//  //                                 P*pars[2]);
-//  // Pion->SetPxPyPzE(Pion2->Px(), Pion2->Py(), Pion2->Pz(), Pion2->E());
-//  // Particle * Proton2 = new Particle();
-//  // *Proton2 = *Initial - * Pion;
-//  // Proton_Particle->SetPxPyPzE(Proton2->Px(), Proton2->Py(), Proton2->Pz(), Proton2->E());
-//  // delete Pion2;
-//  // delete Proton2;
-//  // if (TMath::Abs(F->Eval(P2)) < 1){
-//  //   if (SolnCheck()){
-//  //     return 1;
-//  //   }
-//  // }
-//  ///*--------------------------------------------------*/ 
-//
   return 0;
 
 }

@@ -16,7 +16,6 @@
 
 #include "TCanvas.h"
 
-#include "Particle.hxx"
 #include "CustomRand.hxx"
 
 
@@ -97,6 +96,11 @@ class DEMP_Reaction {
   long long int rNEvent_itt;
   TDatime dFractTime; 
 
+  // Solve Function Counter
+  long long int rSolveEvents_0Sol;
+  long long int rSolveEvents_1Sol;
+  long long int rSolveEvents_2Sol;
+
   double rDEG2RAD;
                    
   double f_Ejectile_Theta_I, f_Ejectile_Theta_F;
@@ -132,9 +136,6 @@ class DEMP_Reaction {
     
   TLorentzVector r_l_Ejectile;
   TLorentzVector r_l_Ejectile_g;
-
-//  Particle* r_l_Ejectile_solved;
-//  Particle* l_Recoil_solved;
 
   TLorentzVector r_l_Ejectile_solved;
   TLorentzVector r_l_Recoil_solved;
@@ -217,17 +218,6 @@ class DEMP_Reaction {
   ///*--------------------------------------------------*/ 
   // Rory Check algorithm
   
-  //  Particle* Interaction;
-  //  Particle* Target;
-  //
-  //  Particle* Initial;
-  //  Particle* Final;
-  //
-  //  Particle* VertBeamElec;
-  //  Particle* VertScatElec;
-  //  Particle* Photon;
-
-
   TLorentzVector* Interaction;
   TLorentzVector* Interaction_Solve;
   TLorentzVector* Target_Solve;
